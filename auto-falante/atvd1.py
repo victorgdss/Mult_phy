@@ -10,14 +10,14 @@ from scipy.integrate import solve_ivp
 m  = 14.35e-3   # massa do cone+bobina (kg)
 b  = 0.786      # amortecimento mecânico (kg/s)
 k  = 1852       # rigidez da suspensão (N/m)
-Bl0 = 4.95      # fator de força EM REPOUSO (N/A) - usado no modelo linear
+Bl0 = 4.95      # fator de força (N/A) em repouso, usado no modelo linear
 L  = 266e-6     # indutância da bobina (H)
 R  = 3.3        # resistência da bobina (ohm)
 
 # =========================================================
 # 2) LER O ÁUDIO GRAVADO E TRANSFORMAR EM Vin(t)
 # =========================================================
-fs, audio = wavfile.read("TC02-in.wav")   # fs = taxa de amostragem (Hz), audio = amostras
+fs, audio = wavfile.read("audio.wav")   # fs = taxa de amostragem (Hz)
 
 # Se o áudio for estéreo (2 canais), pega só um canal
 if audio.ndim > 1:
@@ -27,7 +27,7 @@ if audio.ndim > 1:
 audio = audio.astype(np.float64)
 audio = audio / np.max(np.abs(audio))
 
-# Escala para satisfazer Vin < 2.0V (aqui uso 1.8V de margem de segurança)
+# Escala para satisfazer Vin < 2.0V
 V_PICO = 1.8
 Vin_amostras = V_PICO * audio
 
