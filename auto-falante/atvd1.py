@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
@@ -19,7 +20,13 @@ R  = 3.3        # resistência da bobina (ohm)
 # 2) LER O ÁUDIO GRAVADO E TRANSFORMAR EM Vin(t)
 # =========================================================
 
-fs, audio = wavfile.read("audio.wav")   # fs = taxa de amostragem (Hz)
+pasta_script = os.path.dirname(os.path.abspath(__file__))
+pasta_saida = os.path.join(pasta_script, "resultados")
+os.makedirs(pasta_saida, exist_ok=True)
+
+caminho_audio = os.path.join(pasta_script, "audio.wav")
+
+fs, audio = wavfile.read(caminho_audio)   # fs = taxa de amostragem (Hz)
 
 # Se o áudio for estéreo (2 canais), pega só um canal
 if audio.ndim > 1:
@@ -78,7 +85,7 @@ def Bl_de_x(x):
 # 4) EQUAÇÕES DE ESTADO  z = [i, x, v]
 # =========================================================
 
-NAO_LINEAR = True   # <-- mude para False para rodar a Atividade 1 (modelo linear)
+NAO_LINEAR = False   # <-- False para rodar a Atividade 1 (modelo linear), True caso contrário
 
 def derivadas(t, z):
     i, x, v = z
@@ -122,7 +129,7 @@ axs[2].plot(t_audio, x_t);          axs[2].set_ylabel("x (m)")
 axs[3].plot(t_audio, a_t);          axs[3].set_ylabel("ẍ (m/s²)")
 axs[3].set_xlabel("tempo (s)")
 plt.tight_layout()
-plt.savefig("resposta_temporal.png")
+plt.savefig(os.path.join(pasta_saida, "resposta_temporal.png"))
 plt.show()
 
 # =========================================================
@@ -146,7 +153,7 @@ axs[1].set_xlim(0, 5000)
 for ax in axs:
     ax.set_xlabel("Frequência (Hz)")
 plt.tight_layout()
-plt.savefig("espectros.png")
+plt.savefig(os.path.join(pasta_saida, "espectros.png"))
 plt.show()
 
 # =========================================================
@@ -158,6 +165,6 @@ plt.show()
 a_norm = a_t / np.max(np.abs(a_t))          # normaliza entre -1 e 1
 a_int16 = (a_norm * 32767).astype(np.int16) # converte para int16
 
-wavfile.write("TC02-out1.wav", fs, a_int16)
+wavfile.write(os.path.join(pasta_saida, "TC02-out1.wav"), fs, a_int16)
 
 print("Simulação concluída. Arquivos gerados: resposta_temporal.png, espectros.png, TC02-out1.wav")
