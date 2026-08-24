@@ -1,14 +1,15 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
+np.random.seed(42)
 
 # Parametros do TP
-m    = 0.073
-g    = 9.81
-k    = 6.51e-5
-R    = 11.0
+m  = 0.073
+g = 9.81
+k = 6.51e-5
+R = 11.0
 imax = 2.0
-x0   = 8.5e-3
+x0 = 8.5e-3
 
 # Funcoes
 def fm(i, x):
@@ -41,11 +42,11 @@ def f_pid_ruido(t, y):
     E = y[3]
     ruido = np.random.normal(0, dp)
     x_med = x + ruido
-    Lx   = L(x)
+    Lx = L(x)
     fmix = fm(i, x)
     Blix = Bl(i, x)
     e_med = x_med - x0
-    u     = u0 + Kp*e_med + Ki*E + Kd*v
+    u = u0 + Kp*e_med + Ki*E + Kd*v
     di = u/Lx - R/Lx*i - Blix/Lx*v
     dx = v
     dv = g - fmix/m
@@ -92,7 +93,7 @@ plt.savefig('atividade2_parte1.png')
 
 def simula_epilson(eps):
     y_0 = [i0, x0 + eps, 0.0, 0.0]
-    sol = solve_ivp(f_pid_ruido, [0.0, 2.0], y_0, max_step=1e-3)
+    sol = solve_ivp(f_pid_ruido, [0.0, 5.0], y_0, max_step=1e-3)
     i_pico = np.max(sol.y[0,:])
     desvio_final = abs(sol.y[1,-1] - x0)
     estavel = (i_pico < imax) and (desvio_final < 1e-3)
@@ -106,7 +107,7 @@ estavel_grosso = []
 i_pico_grosso = []
 idx_primeiro_estavel = None
 idx_ultimo_estavel   = None
-viu_estavel          = False
+viu_estavel = False
 
 for idx, eps in enumerate(epilsons_grosso):
     estavel, i_pico = simula_epilson(eps)
@@ -118,7 +119,7 @@ for idx, eps in enumerate(epilsons_grosso):
         idx_primeiro_estavel = idx
 
     if estavel:
-        viu_estavel        = True
+        viu_estavel = True
         idx_ultimo_estavel = idx
     elif viu_estavel:
         break    
