@@ -113,6 +113,9 @@ i_t = sol.y[0]
 x_t = sol.y[1]
 v_t = sol.y[2]
 
+x_max_linear = np.max(np.abs(x_t))
+print(f"Excursão máxima do cone (modelo linear): {x_max_linear:.6e} m")
+
 # Aceleração ẍ(t): derivamos a 3ª equação de estado diretamente
 # (mais preciso que derivar v_t numericamente)
 Bl_vetor = np.array([Bl_de_x(x) if NAO_LINEAR else Bl0 for x in x_t])
