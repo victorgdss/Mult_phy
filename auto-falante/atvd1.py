@@ -57,7 +57,7 @@ u_interp = interp1d(t_audio, Vin_amostras, bounds_error=False, fill_value=0.0)
 # simulando primeiro o modelo LINEAR e vendo o pico de x(t) obtido).
 # Aqui deixo um valor de EXEMPLO - troque pelo valor real que você medir!
 
-x_max_linear = 3e-3   # <-- SUBSTITUA pelo pico real de x(t) da simulação linear
+x_max_linear = 4.3514e-4 # <--  3e-3 SUBSTITUA pelo pico real de x(t) da simulação linear
 
 
 x1 = 0.75 * x_max_linear   # até aqui, Bl constante
@@ -85,7 +85,7 @@ def Bl_de_x(x):
 # 4) EQUAÇÕES DE ESTADO  z = [i, x, v]
 # =========================================================
 
-NAO_LINEAR = False   # <-- False para rodar a Atividade 1 (modelo linear), True caso contrário
+NAO_LINEAR = True   # <-- False para rodar a Atividade 1 (modelo linear), True caso contrário
 
 def derivadas(t, z):
     i, x, v = z
@@ -125,6 +125,8 @@ a_t = (Bl_vetor/m)*i_t - (k/m)*x_t - (b/m)*v_t   # isso é ẍ(t)
 # 6) GRÁFICOS NO TEMPO
 # =========================================================
 
+sufixo = "naolinear" if NAO_LINEAR else "linear"
+
 fig, axs = plt.subplots(4, 1, figsize=(10, 10), sharex=True)
 axs[0].plot(t_audio, Vin_amostras); axs[0].set_ylabel("Vin (V)")
 axs[1].plot(t_audio, i_t);          axs[1].set_ylabel("i (A)")
@@ -132,7 +134,7 @@ axs[2].plot(t_audio, x_t);          axs[2].set_ylabel("x (m)")
 axs[3].plot(t_audio, a_t);          axs[3].set_ylabel("ẍ (m/s²)")
 axs[3].set_xlabel("tempo (s)")
 plt.tight_layout()
-plt.savefig(os.path.join(pasta_saida, "resposta_temporal.png"))
+plt.savefig(os.path.join(pasta_saida, f"resposta_temporal_{sufixo}.png"))
 plt.show()
 
 # =========================================================
@@ -156,7 +158,7 @@ axs[1].set_xlim(0, 5000)
 for ax in axs:
     ax.set_xlabel("Frequência (Hz)")
 plt.tight_layout()
-plt.savefig(os.path.join(pasta_saida, "espectros.png"))
+plt.savefig(os.path.join(pasta_saida, f"espectros_{sufixo}.png"))
 plt.show()
 
 # =========================================================
@@ -168,6 +170,6 @@ plt.show()
 a_norm = a_t / np.max(np.abs(a_t))          # normaliza entre -1 e 1
 a_int16 = (a_norm * 32767).astype(np.int16) # converte para int16
 
-wavfile.write(os.path.join(pasta_saida, "TC02-out1.wav"), fs, a_int16)
+wavfile.write(os.path.join(pasta_saida, f"tp2-out1_{sufixo}.wav"), fs, a_int16)
 
 print("Simulação concluída. Arquivos gerados: resposta_temporal.png, espectros.png, TC02-out1.wav")
