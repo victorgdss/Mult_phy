@@ -16,16 +16,15 @@ Bl0 = 4.95      # fator de força (N/A) em repouso, usado no modelo linear
 L  = 266e-6     # indutância da bobina (H)
 R  = 3.3        # resistência da bobina (ohm)
 
-# =========================================================
-# 2) LER O ÁUDIO GRAVADO E TRANSFORMAR EM Vin(t)
-# =========================================================
-
 pasta_script = os.path.dirname(os.path.abspath(__file__))
 pasta_saida = os.path.join(pasta_script, "resultados")
 os.makedirs(pasta_saida, exist_ok=True)
 
-caminho_audio = os.path.join(pasta_script, "audio.wav")
+# =========================================================
+# 2) LER O ÁUDIO GRAVADO E TRANSFORMAR EM Vin(t)
+# =========================================================
 
+caminho_audio = os.path.join(pasta_script, "audio.wav")
 fs, audio = wavfile.read(caminho_audio)   # fs = taxa de amostragem (Hz)
 
 # Se o áudio for estéreo (2 canais), pega só um canal
