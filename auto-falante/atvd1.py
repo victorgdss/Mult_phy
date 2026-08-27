@@ -86,6 +86,7 @@ def Bl_de_x(x):
 # =========================================================
 
 NAO_LINEAR = True   # <-- False para rodar a Atividade 1 (modelo linear), True caso contrário
+label_modelo = "nao_linear" if NAO_LINEAR else "linear"
 
 def derivadas(t, z):
     i, x, v = z
@@ -114,7 +115,7 @@ x_t = sol.y[1]
 v_t = sol.y[2]
 
 x_max_linear = np.max(np.abs(x_t))
-print(f"Excursão máxima do cone (modelo linear): {x_max_linear:.6e} m")
+print(f"Excursão máxima do cone (modelo {label_modelo}): {x_max_linear:.6e} m")
 
 # Aceleração ẍ(t): derivamos a 3ª equação de estado diretamente
 # (mais preciso que derivar v_t numericamente)
@@ -125,8 +126,6 @@ a_t = (Bl_vetor/m)*i_t - (k/m)*x_t - (b/m)*v_t   # isso é ẍ(t)
 # 6) GRÁFICOS NO TEMPO
 # =========================================================
 
-sufixo = "naolinear" if NAO_LINEAR else "linear"
-
 fig, axs = plt.subplots(4, 1, figsize=(10, 10), sharex=True)
 axs[0].plot(t_audio, Vin_amostras); axs[0].set_ylabel("Vin (V)")
 axs[1].plot(t_audio, i_t);          axs[1].set_ylabel("i (A)")
@@ -134,8 +133,7 @@ axs[2].plot(t_audio, x_t);          axs[2].set_ylabel("x (m)")
 axs[3].plot(t_audio, a_t);          axs[3].set_ylabel("ẍ (m/s²)")
 axs[3].set_xlabel("tempo (s)")
 plt.tight_layout()
-plt.savefig(os.path.join(pasta_saida, f"resposta_temporal_{sufixo}.png"))
-plt.show()
+plt.savefig(os.path.join(pasta_saida, f"resposta_temporal_{label_modelo}.png"))
 
 # =========================================================
 # 7) ESPECTROS (FFT) DE Vin E ẍ, PARA COMPARAR
@@ -158,8 +156,7 @@ axs[1].set_xlim(0, 5000)
 for ax in axs:
     ax.set_xlabel("Frequência (Hz)")
 plt.tight_layout()
-plt.savefig(os.path.join(pasta_saida, f"espectros_{sufixo}.png"))
-plt.show()
+plt.savefig(os.path.join(pasta_saida, f"espectros_{label_modelo}.png"))
 
 # =========================================================
 # 8) SALVAR ẍ(t) COMO ARQUIVO DE ÁUDIO
@@ -170,6 +167,71 @@ plt.show()
 a_norm = a_t / np.max(np.abs(a_t))          # normaliza entre -1 e 1
 a_int16 = (a_norm * 32767).astype(np.int16) # converte para int16
 
-wavfile.write(os.path.join(pasta_saida, f"tp2-out1_{sufixo}.wav"), fs, a_int16)
+wavfile.write(os.path.join(pasta_saida, f"tp2-out1_{label_modelo}.wav"), fs, a_int16)
 
-print("Simulação concluída. Arquivos gerados: resposta_temporal.png, espectros.png, TC02-out1.wav")
+# =========================================================
+# 9) FUNÇÃO DE RESPOSTA EM FREQUÊNCIA (FRF) DO SISTEMA LINEAR
+# =========================================================
+# Aqui calculamos G(jw) = C(jwI - A)^-1 B para uma faixa de frequências,
+# usando o modelo LINEAR (Bl constante = Bl0), independente de qual
+# modelo você está simulando no tempo (linear ou não linear).
+# Isso serve só para visualizar a "banda passante" teórica do alto-falante.
+
+# Faixa de frequência de interesse (mesma do exemplo do professor)
+fmin = 20      # Hz
+fmax = 22e3    # Hz
+npoints = 200
+f_frf = np.logspace(np.log10(fmin), np.log10(fmax), npoints)  # escala log
+omega = 2 * np.pi * f_frf
+
+# Matrizes de espaço de estados do modelo linear (Bl = Bl0 constante)
+A_lin = np.array([[-R/L, 0, -Bl0/L],
+                   [0, 0, 1],
+                   [Bl0/m, -k/m, -b/m]])
+B_lin = np.array([1/L, 0, 0])
+C_lin = np.array([0, 0, 1])   # saída = velocidade (v)
+I3 = np.eye(3)
+
+# Calcula G(jw) para cada frequência
+G = 1j * np.zeros(npoints)
+for idx in range(npoints):
+    aux = np.linalg.inv(1j*omega[idx]*I3 - A_lin)
+    G[idx] = C_lin.dot(aux.dot(B_lin))
+
+# FRF em dB, aproximando a resposta de aceleração: FRF ~ jw*G(jw)
+FRF = 20*np.log10(np.abs(1j*omega*G))
+FRF = FRF - np.max(FRF)   # normaliza para 0dB no pico (constante de proporcionalidade é desconhecida)
+
+# Encontra a banda passante (-3dB)
+Band_indexs = np.flatnonzero(np.where(FRF > -3, 1, 0))
+fc_min = f_frf[Band_indexs[0]]
+fc_max = f_frf[Band_indexs[-1]]
+BW = fc_max - fc_min
+
+print(f"Banda passante do alto-falante: {fc_min:.1f} Hz a {fc_max:.1f} Hz (largura: {BW:.1f} Hz)")
+
+# =========================================================
+# 10) PLOTAR FRF JUNTO COM O ESPECTRO DO ÁUDIO DE ENTRADA
+# =========================================================
+# Reaproveita o espectro de Vin que já calculamos antes (f_vin, mag_vin)
+
+fig, ax1 = plt.subplots(figsize=(10, 5))
+
+# Espectro do áudio (normalizado pelo pico, escala log em x)
+ax1.semilogx(f_vin, mag_vin / np.max(mag_vin), 'b', label="Espectro de Vin (normalizado)")
+ax1.set_xlabel("Frequência (Hz)")
+ax1.set_ylabel("Magnitude normalizada (áudio)", color='b')
+ax1.set_xlim(10, 2e4)
+
+# FRF do sistema em um segundo eixo y (está em dB, escala diferente)
+ax2 = ax1.twinx()
+ax2.semilogx(f_frf, FRF, 'g-D', markevery=[Band_indexs[0], Band_indexs[-1]], label="FRF do alto-falante")
+ax2.axhline(-3, color='k', linestyle='-.', label="-3dB")
+ax2.set_ylabel("FRF (dB)", color='g')
+
+fig.legend(loc="upper right", bbox_to_anchor=(0.9, 0.9))
+plt.title("Espectro do áudio vs. Banda passante do alto-falante")
+plt.tight_layout()
+plt.savefig(os.path.join(pasta_saida, f"frf_vs_espectro_{label_modelo}.png"))
+
+print("Simulação concluída.")
