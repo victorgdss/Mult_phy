@@ -332,12 +332,39 @@ def perfil_no_eixo(Ez_h, n=700):
     assert np.median(Ez) > 0.0, "Ez com sinal inesperado: revisar condicoes de contorno."
  
     return s, Ez, ds
- 
- 
-def calcular_tensoes_criticas(E_tip_1V):
+
+
+def campo_referencia_em_R_meio(Ez_h, s_ref=None, largura_rel=0.2, n=21):
+    """Campo axial de referencia para a condicao de campo critico (Eq. 1/2).
+
+    NAO extrai o campo na propria ponta (s=0): esse valor e muito sensivel a
+    malha (ver estudo de convergencia - ainda varia ~0.7% entre as duas
+    malhas mais finas testadas, e R/64 nem localiza o ponto). O
+    relatorio-guia do TC04 (ja corrigido pelo professor) evitou esse mesmo
+    problema de proposito, extraindo o campo em s = R/2 com a media numa
+    pequena vizinhanca - e o professor sinalizou explicitamente no
+    relatorio-guia que valores muito proximos da ponta pareciam suspeitos
+    ("existem pontos maiores que 8000 V/m" na figura do campo axial).
+    Replicamos aqui a mesma metodologia.
+    """
+    if s_ref is None:
+        s_ref = R / 2.0
+    s_janela = np.linspace(s_ref * (1.0 - largura_rel), s_ref * (1.0 + largura_rel), n)
+    z_janela = z_tip + s_janela
+    pontos = np.column_stack((np.zeros_like(z_janela), z_janela))
+    Ez_janela = avaliar_funcao_em_pontos(Ez_h, pontos)
+    bons = np.isfinite(Ez_janela)
+    if not np.any(bons):
+        raise RuntimeError("Nao foi possivel avaliar o campo na vizinhanca de s=R/2.")
+    if not np.all(bons):
+        warnings.warn(f"{int((~bons).sum())} ponto(s) da janela em R/2 nao localizado(s); ignorado(s) na media.")
+    return float(np.mean(Ez_janela[bons]))
+
+
+def calcular_tensoes_criticas(E_ref_1V):
     E_crit = np.sqrt(np.pi * gamma / (2.0 * epsilon_0 * R))                       # Eq. (1)
     V_crit_analitico = np.sqrt(gamma * Rc / epsilon_0) * np.log(4.0 * d / Rc)     # Eq. (2)
-    V_crit_sim = E_crit / E_tip_1V                                                # linearidade
+    V_crit_sim = E_crit / E_ref_1V                                                # linearidade
     erro = abs(V_crit_sim - V_crit_analitico) / V_crit_analitico * 100.0
     return E_crit, V_crit_sim, V_crit_analitico, erro
  
@@ -378,17 +405,16 @@ def estudo_convergencia(comm):
         msh_i, _, ft_i = construir_malha(comm, R / div)
         _, Ez_i, _, _ = resolver_eletrostatica(msh_i, ft_i, prefixo=f"conv{div}")
         try:
-            _, Ez_prof, _ = perfil_no_eixo(Ez_i, n=50)
+            Et = campo_referencia_em_R_meio(Ez_i)
         except RuntimeError as err:
             print(f"lc_tip = R/{div:<3d}  falhou: {err}")
             continue
-        Et = abs(Ez_prof[0])
         ncel = msh_i.topology.index_map(msh_i.topology.dim).size_local
         Vc = E_crit / Et
-        print(f"lc_tip = R/{div:<3d}  celulas = {ncel:<8d}  E_tip(1V) = {Et:10.1f} V/m   V_crit = {Vc:8.2f} V")
+        print(f"lc_tip = R/{div:<3d}  celulas = {ncel:<8d}  E_ref(1V, R/2) = {Et:10.1f} V/m   V_crit = {Vc:8.2f} V")
         linhas.append((div, ncel, Et, Vc))
     np.savetxt(OUTDIR / "convergencia_malha.csv", np.array(linhas), delimiter=",",
-               header="div_R,celulas,E_tip_1V_Vpm,V_crit_V", comments="")
+               header="div_R,celulas,E_ref_1V_R2_Vpm,V_crit_V", comments="")
     return linhas
  
  
@@ -540,12 +566,13 @@ def main():
     print(f"Potencial maximo: {np.max(np.asarray(phi_h.x.array).real):.6g} V")
  
     s, Ez_1V, ds = perfil_no_eixo(Ez_h)
-    E_tip_1V = abs(Ez_1V[0])
-    E_crit, V_crit_sim, V_crit_analitico, erro = calcular_tensoes_criticas(E_tip_1V)
- 
+    E_ref_1V = campo_referencia_em_R_meio(Ez_h)
+    E_crit, V_crit_sim, V_crit_analitico, erro = calcular_tensoes_criticas(E_ref_1V)
+
     print("\n--- Campo critico e tensoes ---")
     print(f"Primeiro ponto do eixo: {ds * 1e6:.6f} um apos a ponta")
-    print(f"Ez na ponta para Vc = 1 V: {E_tip_1V:.6e} V/m")
+    print(f"Ez na ponta (s~0, informativo, NAO usado p/ V_crit - sensivel a malha): {abs(Ez_1V[0]):.6e} V/m")
+    print(f"Ez de referencia em s=R/2 (usado p/ V_crit, media na vizinhanca): {E_ref_1V:.6e} V/m")
     print(f"Campo critico (Eq. 1): {E_crit:.6e} V/m")
     print(f"Tensao critica simulada: {V_crit_sim:.6f} V")
     print(f"Tensao critica analitica (Eq. 2): {V_crit_analitico:.6f} V")
@@ -576,7 +603,8 @@ def main():
     with open(OUTDIR / "resumo_resultados.txt", "w", encoding="utf-8") as f:
         f.write("TC04 - resumo dos resultados\n")
         f.write(f"E_crit = {E_crit:.12e} V/m\n")
-        f.write(f"E_tip_1V = {E_tip_1V:.12e} V/m\n")
+        f.write(f"E_tip_1V_informativo_nao_usado = {abs(Ez_1V[0]):.12e} V/m\n")
+        f.write(f"E_ref_1V_R2 = {E_ref_1V:.12e} V/m\n")
         f.write(f"V_crit_sim = {V_crit_sim:.12e} V\n")
         f.write(f"V_crit_analitico = {V_crit_analitico:.12e} V\n")
         f.write(f"erro_relativo = {erro:.8f} %\n")
