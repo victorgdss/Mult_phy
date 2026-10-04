@@ -1,0 +1,13 @@
+TC04 - resumo dos resultados
+E_crit = 1.215891858705e+07 V/m
+E_tip_1V = 1.086368252606e+04 V/m
+V_crit_sim = 1.119226243761e+03 V
+V_crit_analitico = 3.487540472568e+03 V
+erro_relativo = 67.90786365 %
+max_En_calota/E_crit = 1.00441082
+Q = 4.729815719175e-14 C
+m = 3.786666345127e-14 kg
+s_inicial = 2.000000000000e-06 m
+tempo_travessia = 1.257016379282e-04 s
+velocidade_saida = 5.189328415177e+01 m/s
+velocidade_saida_energia = 5.189326768762e+01 m/s
