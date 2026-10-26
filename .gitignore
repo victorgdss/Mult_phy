@@ -4,3 +4,5 @@ __pycache__/
 pdfs/
 .vscode
 Miniforge3-Linux-x86_64.sh
+.repomix/
+repomix/
