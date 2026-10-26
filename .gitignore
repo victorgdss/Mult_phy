@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 pdfs/
+.vscode
+Miniforge3-Linux-x86_64.sh
