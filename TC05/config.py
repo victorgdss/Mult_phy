@@ -66,6 +66,6 @@ TAG_SPH_SURF = 10         # curva: arco da superfície externa da esfera
 
 # -------------------------------------------------------------------- malha
 H_DEV = R_CORE / 8        # tamanho dos elementos na região do dispositivo (m)
-H_FAR = 2 * R_CORE        # tamanho dos elementos longe do dispositivo (m)
+H_FAR = H_DEV             # tamanho dos elementos longe do dispositivo (m)
 GAP_ELEMS = 4             # nº de elementos ao longo da altura do entreferro
 H_MIN = 0.05e-3           # tamanho mínimo permitido (m)
